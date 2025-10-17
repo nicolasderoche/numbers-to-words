@@ -1,0 +1,4 @@
+DEV=/Users/nderoche/dev/gitlab/eloquant
+export JUNIT_HOME="$DEV/java"
+export PATH="$PATH:$JUNIT_HOME"
+export CLASSPATH="$CLASSPATH:$JUNIT_HOME/junit-4.13.2.jar:$JUNIT_HOME/hamcrest-core-1.3.jar"
