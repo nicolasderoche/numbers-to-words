@@ -5,39 +5,26 @@
 // Rules read from : https://oxfordlanguageclub.com/page/blog/saying-large-numbers-in-english
 // Note: omission of "and" and "," that are sometimes used.
 //
-// $ javac NumbersToWords.java 
-// $ java NumbersToWords 1234
-// 1234 ---> one thousand two hundred thirty four
+//   $ javac NumbersToWords.java 
+//   $ java NumbersToWords 1234
+//   1234 ---> one thousand two hundred thirty-four
 //
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 public class NumbersToWords {
 
     /** Describe numbers from 0 to 19 */
-    List<String> units = Arrays.asList("zero", "one", "two", "three", "four", "five", "six", "seven", "eight",
+    private final List<String> units = Arrays.asList("zero", "one", "two", "three", "four", "five", "six", "seven",
+            "eight",
             "nine", "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen",
             "nineteen");
     /** Describe the numbers from 0 to 90 in tens. */
-    List<String> tens = Arrays.asList("zero", "ten", "twenty", "thirty", "forty", "fifty", "sixty", "seventy",
+    private final List<String> tens = Arrays.asList("zero", "ten", "twenty", "thirty", "forty", "fifty", "sixty",
+            "seventy",
             "eighty", "ninety");
-
-    /**
-     * Handling plurals for a list of tables containing names of multiples of one
-     * hundred.
-     * 
-     * @param list of strings
-     * @return transformed list
-     */
-    List<String> plural(List<String> list) {
-        return IntStream.range(0, list.size())
-                .mapToObj(i -> (i > 1) ? (list.get(i) + "s") : (list.get(i)))
-                .collect(Collectors.toList());
-    }
 
     public static void main(String[] args) {
 
@@ -54,101 +41,90 @@ public class NumbersToWords {
         return convert(value, false);
     }
 
-    public String convert(int rawvalue, boolean debug) {
-        if (rawvalue == 0) {
+    /**
+     * Convert an integer into words
+     * 
+     * @param value
+     * @param debug
+     * @return the English sentence that represents the value
+     */
+    public String convert(int value, boolean debug) {
+        if (value == 0) {
             return units.get(0);
         }
-        if (rawvalue > 1000000000) {
+        if (value >= Integer.MAX_VALUE) {
+            // we could manage MAX_VALUE, but this is to handle an "out of range value" case
             return "Number is too large!";
         }
 
         List<String> result = new ArrayList<>();
-        if (rawvalue < 0) {
+        if (value < 0) {
             result.add("minus");
         }
-        int value = Math.abs(rawvalue);
-        int digit9 = (value % (int) Math.pow(10, 9)) / (int) Math.pow(10, 8);
-        int digit8 = (value % (int) Math.pow(10, 8)) / (int) Math.pow(10, 7);
-        int digit7 = (value % (int) Math.pow(10, 7)) / (int) Math.pow(10, 6);
-        int digit6 = (value % (int) Math.pow(10, 6)) / (int) Math.pow(10, 5);
-        int digit5 = (value % (int) Math.pow(10, 5)) / (int) Math.pow(10, 4);
-        int digit4 = (value % (int) Math.pow(10, 4)) / (int) Math.pow(10, 3);
-        int digit3 = (value % (int) Math.pow(10, 3)) / (int) Math.pow(10, 2); // <-- (value % 1000) / 100
-        int digit2 = (value % (int) Math.pow(10, 2)) / (int) Math.pow(10, 1); // <-- (value % 100) / 10
-        int digit1 = (value % (int) Math.pow(10, 1)) / (int) Math.pow(10, 0); // <-- (value % 10)
+        int v = Math.abs(value);
 
-        if (digit2 < 2) {
-            digit1 += digit2 * 10;
-            digit2 = 0;
+        // the max (Integer.MAX_VALUE) is 2147483646 and its length is 10 digits.
+        // It is not necessary to get digits beyond the 10th as they do not exist.
+        int digit10 = (v % (int) Math.pow(10, 10)) / (int) Math.pow(10, 9); // <-- (v % 10000000000) / 1000000000
+        int digit9 = (v % (int) Math.pow(10, 9)) / (int) Math.pow(10, 8);
+        int digit8 = (v % (int) Math.pow(10, 8)) / (int) Math.pow(10, 7);
+        int digit7 = (v % (int) Math.pow(10, 7)) / (int) Math.pow(10, 6);
+        int digit6 = (v % (int) Math.pow(10, 6)) / (int) Math.pow(10, 5);
+        int digit5 = (v % (int) Math.pow(10, 5)) / (int) Math.pow(10, 4);
+        int digit4 = (v % (int) Math.pow(10, 4)) / (int) Math.pow(10, 3);
+        int digit3 = (v % (int) Math.pow(10, 3)) / (int) Math.pow(10, 2); // <-- (v % 1000) / 100
+        int digit2 = (v % (int) Math.pow(10, 2)) / (int) Math.pow(10, 1); // <-- (v % 100) / 10
+        int digit1 = (v % (int) Math.pow(10, 1)) / (int) Math.pow(10, 0); // <-- (v % 10)
+
+        result.add(tdn(0, 0, digit10, "billion"));
+        result.add(tdn(digit9, digit8, digit7, "million"));
+        result.add(tdn(digit6, digit5, digit4, "thousand"));
+        result.add(tdn(digit3, digit2, digit1, null));
+
+        // remove empty elements
+        result.removeAll(Arrays.asList("", null));
+        return String.join(" ", result);
+    }
+
+    /**
+     * tdn for Three Digit Number made of c x 100 + d x 10 + u
+     * 
+     * @param h       hundreds
+     * @param t       tens
+     * @param u       units
+     * @param postfix the postfix to add when number is not null
+     * @return
+     */
+    private String tdn(int h, int t, int u, String postfix) {
+        List<String> result = new ArrayList<>();
+
+        // in English, numbers up to nineteen are specific, beyond that they are
+        // compound
+        if (t < 2) {
+            u += t * 10;
+            t = 0;
         }
-        if (digit5 < 2) {
-            digit4 += digit5 * 10;
-            digit5 = 0;
-        }
-        if (digit8 < 2) {
-            digit7 += digit8 * 10;
-            digit8 = 0;
-        }
 
-        if (debug) {
-            System.out.println("[" + value + "] digit9 = " + digit9);
-            System.out.println("[" + value + "] digit8 = " + digit8);
-            System.out.println("[" + value + "] digit7 = " + digit7);
-            System.out.println("[" + value + "] digit6 = " + digit6);
-            System.out.println("[" + value + "] digit5 = " + digit5);
-            System.out.println("[" + value + "] digit4 = " + digit4);
-            System.out.println("[" + value + "] digit3 = " + digit3);
-            System.out.println("[" + value + "] digit2 = " + digit2);
-            System.out.println("[" + value + "] digit1 = " + digit1);
-
-        }
-
-        // List<String> hundreds = plural(units.stream().map(s -> s + " hundred").collect(Collectors.toList()));
-        // List<String> thousands = plural(units.stream().map(s -> s + " thousand").collect(Collectors.toList());
-        // List<String> millions = plural(units.stream().map(s -> s + " million").collect(Collectors.toList()));
-
-        // System.out.println("unite.size = " + hundreds);
-        // System.out.println("unite.size = " + units.size());
-
-        if (digit9 > 0) {
-            result.add(units.get(digit9));
+        if (h > 0) {
+            // add hundreds
+            result.add(units.get(h));
             result.add("hundred");
         }
-        if (digit8 > 0) {
-            result.add(tens.get(digit8));
-        }
-        if (digit7 > 0) {
-            result.add(units.get(digit7));
-        }
-        if (digit7 > 0 || digit8 > 0 || digit9 > 0) {
-            result.add("million");
 
+        if (t > 0 && u > 0) {
+            // join tens and unit with a dash
+            result.add(tens.get(t) + "-" + units.get(u));
+        } else if (t > 0) {
+            // just add the tens. unit is null
+            result.add(tens.get(t));
+        } else if (u > 0) {
+            // just add the unit. tens is null
+            result.add(units.get(u));
         }
-        if (digit6 > 0) {
-            result.add(units.get(digit6));
-            result.add("hundred");
+        if (postfix != null && (h + t + u) > 0) {
+            // add the postfix if number is not null
+            result.add(postfix);
         }
-        if (digit5 > 0) {
-            result.add(tens.get(digit5));
-        }
-        if (digit4 > 0) {
-            result.add(units.get(digit4));
-        }
-        if (digit4 > 0 || digit5 > 0 || digit6 > 0) {
-            result.add("thousand");
-
-        }
-        if (digit3 > 0) {
-            result.add(units.get(digit3));
-            result.add("hundred");
-        }
-        if (digit2 > 0) {
-            result.add(tens.get(digit2));
-        }
-        if (digit1 > 0) {
-            result.add(units.get(digit1));
-        }
-        // System.out.println(rawvalue + " ---> " + String.join(" ", result));
         return String.join(" ", result);
     }
 }
