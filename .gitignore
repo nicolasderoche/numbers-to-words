@@ -1,1 +1,3 @@
 *.class
+restapi/.gradle
+restapi/build
